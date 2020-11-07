@@ -14,7 +14,7 @@
    <string>MainWindow</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <widget class="QPushButton" name="pushButton">
+   <widget class="QPushButton" name="changeServerState">
     <property name="geometry">
      <rect>
       <x>330</x>
@@ -38,28 +38,28 @@
     </property>
     <layout class="QVBoxLayout" name="verticalLayout">
      <item>
-      <widget class="QLabel" name="label">
+      <widget class="QLabel" name="serverStatusLabel">
        <property name="text">
         <string>Server status:</string>
        </property>
       </widget>
      </item>
      <item>
-      <widget class="QLabel" name="label_2">
+      <widget class="QLabel" name="serverStatus">
        <property name="text">
         <string>Down</string>
        </property>
       </widget>
      </item>
      <item>
-      <widget class="QLabel" name="label_3">
+      <widget class="QLabel" name="usersOnlineLabel">
        <property name="text">
         <string>Users online:</string>
        </property>
       </widget>
      </item>
      <item>
-      <widget class="QLabel" name="label_4">
+      <widget class="QLabel" name="usersOnline">
        <property name="text">
         <string>0</string>
        </property>

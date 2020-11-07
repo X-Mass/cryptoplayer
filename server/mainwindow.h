@@ -4,6 +4,8 @@
 #include <QMainWindow>
 #include <QtNetwork>
 #include <QJsonObject>
+#include <QtCrypto>
+#include <QtSql>
 
 
 QT_BEGIN_NAMESPACE
@@ -19,7 +21,7 @@ class MainWindow : public QMainWindow {
         ~MainWindow();
 
     private slots:
-        void on_pushButton_clicked();
+        void on_changeServerState_clicked();
         void newUser();
         void response();
 
@@ -27,7 +29,11 @@ class MainWindow : public QMainWindow {
         Ui::MainWindow *ui;
         QTcpServer *tcpServer;
         bool serverStatus;
-        QMap<int,QTcpSocket *> SClients;
-        bool userInBase(QString login, QString hash); // QString, ByteArray or sth else?
+        QMap<int, QTcpSocket *> SClients;
+        QMap<int, QCA::SymmetricKey *> clientsKeys;
+        QMap<int, QCA::InitializationVector *> clientsIV;
+        bool signIn(QString login, QString hash);
+        QString signUp(QString login, QString hash);
+        QSqlDatabase sdb;
 };
 #endif // MAINWINDOW_H

@@ -5,6 +5,8 @@
 #include <QtNetwork>
 #include <QJsonObject>
 
+#include "player.h"
+
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -20,11 +22,13 @@ class MainWindow : public QMainWindow {
         void resizeEvent(QResizeEvent* event);
 
     private slots:
-        void on_pushButton_clicked();
+        void on_signInButton_clicked();
+        void on_signUpButton_clicked();
 
     private:
         Ui::MainWindow *ui;
         QTcpSocket *tcpSocket;
         void connectToServer();
+        Player *player;
 };
 #endif // MAINWINDOW_H

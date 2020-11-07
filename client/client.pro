@@ -1,5 +1,6 @@
 QT       += core gui
 QT       += network
+QT       += multimedia
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -11,13 +12,16 @@ CONFIG += c++11
 
 SOURCES += \
     main.cpp \
-    mainwindow.cpp
+    mainwindow.cpp \
+    player.cpp
 
 HEADERS += \
-    mainwindow.h
+    mainwindow.h \
+    player.h
 
 FORMS += \
-    mainwindow.ui
+    mainwindow.ui \
+    player.ui
 
 TRANSLATIONS += \
     client_en_US.ts
