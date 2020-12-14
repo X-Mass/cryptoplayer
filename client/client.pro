@@ -5,6 +5,9 @@ QT       += multimedia
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
 CONFIG += c++11
+TARGET = musicplayer
+TEMPLATE = app
+DEFINES += QT_DEPRECATED_WARNINGS
 
 # You can make your code fail to compile if it uses deprecated APIs.
 # In order to do so, uncomment the following line.
@@ -13,11 +16,17 @@ CONFIG += c++11
 SOURCES += \
     main.cpp \
     mainwindow.cpp \
-    player.cpp
+    musicplayer.cpp \
+    controlui.cpp \
+    centerui.cpp \
+    musicfile.cpp
 
 HEADERS += \
     mainwindow.h \
-    player.h
+    musicplayer.h \
+    controlui.h \
+    centerui.h \
+    musicfile.h
 
 FORMS += \
     mainwindow.ui \
@@ -25,6 +34,10 @@ FORMS += \
 
 TRANSLATIONS += \
     client_en_US.ts
+
+
+RESOURCES += \
+    res.qrc
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin

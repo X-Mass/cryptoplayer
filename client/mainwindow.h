@@ -5,7 +5,7 @@
 #include <QtNetwork>
 #include <QJsonObject>
 
-#include "player.h"
+#include "musicplayer.h"
 
 
 QT_BEGIN_NAMESPACE
@@ -25,10 +25,12 @@ class MainWindow : public QMainWindow {
         void on_signInButton_clicked();
         void on_signUpButton_clicked();
 
+
     private:
         Ui::MainWindow *ui;
         QTcpSocket *tcpSocket;
         void connectToServer();
-        Player *player;
+        MusicPlayer *player;
+
 };
 #endif // MAINWINDOW_H

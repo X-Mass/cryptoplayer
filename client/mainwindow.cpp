@@ -52,7 +52,7 @@ void MainWindow::on_signInButton_clicked() { // Sign in
             if (recieved["isValid"].toBool() == true) {
                 qDebug() << "Login/Password pair is correct";
 
-                Player* player = new Player();
+                MusicPlayer* player = new MusicPlayer();
                 player->setParent(this);
                 player->resize(320, 240);
                 player->show();
