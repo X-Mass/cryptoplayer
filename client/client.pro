@@ -19,6 +19,9 @@ HEADERS += \
     mainwindow.h \
     player.h
 
+
+#INCLUDEPATH += /usr/local/lib/qca-qt5.framework/Versions/2/Headers/
+
 FORMS += \
     mainwindow.ui \
     player.ui
@@ -30,3 +33,6 @@ TRANSLATIONS += \
 qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
+
+#unix: CONFIG += link_pkgconfig
+#unix: PKGCONFIG += qca2-qt5

@@ -6,6 +6,7 @@
 #include <QJsonObject>
 #include <QtCrypto>
 #include <QtSql>
+#include <QList>
 
 
 QT_BEGIN_NAMESPACE
@@ -24,6 +25,8 @@ class MainWindow : public QMainWindow {
         void on_changeServerState_clicked();
         void newUser();
         void response();
+        void dragEnterEvent(QDragEnterEvent *event);
+        void dropEvent(QDropEvent *event);
 
     private:
         Ui::MainWindow *ui;
@@ -33,7 +36,12 @@ class MainWindow : public QMainWindow {
         QMap<int, QCA::SymmetricKey *> clientsKeys;
         QMap<int, QCA::InitializationVector *> clientsIV;
         bool signIn(QString login, QString hash);
-        QString signUp(QString login, QString hash);
+        int signUp(QString login, QString hash); // make enum for return value. Atm 0 == success, 1 == user already in base
         QSqlDatabase sdb;
+        int addFile(QString fileName);
+        QMap<unsigned int, QString> trackList;
+        void updateTrackList();
+        void updateTrackListView();
+        void insertTrackListToJson(QJsonObject& json);
 };
 #endif // MAINWINDOW_H

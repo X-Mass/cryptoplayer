@@ -1,3 +1,5 @@
+//#include <QtCrypto>
+
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
@@ -15,7 +17,7 @@ MainWindow::~MainWindow() {
 }
 
 void MainWindow::resizeEvent(QResizeEvent* event) {
-    // code here to make all stuff centered everytime
+    // code here to make all stuff always centered
     QMainWindow::resizeEvent(event);
 }
 
@@ -41,6 +43,7 @@ void MainWindow::on_signInButton_clicked() { // Sign in
     QJsonObject message;
     message["action"] = "login";
     message["login"] = ui->lineEdit->text();
+//     QCA::Hash hash1(QStringLiteral("md5"));
     message["pass"] = ui->lineEdit_2->text(); // must be hash here, not pure string
     QJsonDocument document(message);
     QByteArray bytes = document.toJson();
@@ -82,10 +85,11 @@ void MainWindow::on_signUpButton_clicked() { // Sign up
         QJsonDocument recievedDocument = QJsonDocument::fromJson(tcpSocket->readAll());
         QJsonObject recieved = recievedDocument.object();
         if (recieved["action"].toString() == "register") {
-            if (recieved["result"].toString() == "success") {
+            // result 0 == success, 1 == user already in base
+            if (recieved["result"].toString() == "0") {
                 qDebug() << "New user signed up";
                 // TODO
-            } else if (recieved["result"].toString() == "already") {
+            } else if (recieved["result"].toString() == "1") {
                 qDebug() << "User has already signed up";
             }
         } else {
