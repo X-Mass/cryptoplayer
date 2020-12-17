@@ -4,7 +4,7 @@
 #include <QMainWindow>
 #include <QtNetwork>
 #include <QJsonObject>
-#include <QtCrypto>
+
 #include <QtSql>
 #include <QList>
 
@@ -33,9 +33,9 @@ class MainWindow : public QMainWindow {
         QTcpServer *tcpServer;
         bool serverStatus;
         QMap<int, QTcpSocket *> SClients;
-        QMap<int, QCA::SymmetricKey *> clientsKeys;
-        QMap<int, QCA::InitializationVector *> clientsIV;
-        bool signIn(QString login, QString hash);
+        QMap<int, QString> clientsKeys;
+        QMap<int, QString> clientsIV;
+        QString signIn(QString login, QString hash);
         int signUp(QString login, QString hash); // make enum for return value. Atm 0 == success, 1 == user already in base
         QSqlDatabase sdb;
         int addFile(QString fileName);

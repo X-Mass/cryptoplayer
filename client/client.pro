@@ -34,5 +34,10 @@ qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
 
-#unix: CONFIG += link_pkgconfig
-#unix: PKGCONFIG += qca2-qt5
+unix: CONFIG += link_pkgconfig
+unix: PKGCONFIG += qca2-qt5
+
+INCLUDEPATH += /usr/lib/x86_64-linux-gnu/qt5/plugins
+INCLUDEPATH += /usr/local/include/cryptopp
+
+LIBS += -lcryptopp

@@ -4,7 +4,8 @@
 #include <QWidget>
 #include <QtNetwork>
 #include <QJsonObject>
-
+#include "cryptlib.h"
+#include "secblock.h"
 
 namespace Ui {
 class Player;
@@ -16,11 +17,12 @@ class Player : public QWidget {
 
     public:
         explicit Player(QWidget *parent = nullptr);
-        explicit Player(QTcpSocket *tcpSocket, QWidget *parent = nullptr);
+        explicit Player(QTcpSocket *tcpSocket, CryptoPP::SecByteBlock key, QWidget *parent = nullptr);
         ~Player();
 
     private:
         QTcpSocket *tcpSocket;
+        CryptoPP::SecByteBlock key;
         Ui::Player *ui;
         QMap<unsigned int, QString> trackList;
         void updateTrackList();

@@ -3,11 +3,51 @@
 
 #include <QMimeData>
 #include <QDragEnterEvent>
+#include "cryptlib.h"
+#include "osrng.h"
+#include "filters.h"
+#include "base64.h"
 
 
 #define PORT 1337
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWindow) {
+   /* std::string encoded, encoded2, encoded3;
+    CryptoPP::SecByteBlock iv(16), userAccess(16);
+    CryptoPP::OS_GenerateRandomBlock(false, iv, iv.size());
+    CryptoPP::OS_GenerateRandomBlock(false, userAccess, userAccess.size());
+    std::string ivs = std::string(reinterpret_cast<const char*>(iv.data()), iv.size());
+    CryptoPP::StringSource (ivs, true,
+                        new CryptoPP::Base64Encoder(
+                                       new CryptoPP::StringSink(encoded)
+                                       )
+                        ); // StringSource
+   //
+
+    ivs = encoded;
+    CryptoPP::StringSource (ivs, true,
+                        new CryptoPP::Base64Decoder(
+                                       new CryptoPP::StringSink(encoded2)
+                                       )
+                        ); // StringSource
+    CryptoPP::SecByteBlock block((const CryptoPP::byte*)encoded2.data(), encoded2.size());
+    if (block == iv) {
+        qDebug() << "LOL";
+    } else {
+        qDebug() << "Not LOL";
+    }
+
+
+    CryptoPP::StringSource (encoded2, true,
+                        new CryptoPP::Base64Encoder(
+                                       new CryptoPP::StringSink(encoded3)
+                                       )
+                        );
+
+    qDebug() << QString::fromStdString(encoded);
+    qDebug() << QString::fromStdString(encoded2);
+    qDebug() << QString::fromStdString(encoded3);*/
+
     ui->setupUi(this);
     ui->verticalLayout->setAlignment(Qt::AlignHCenter);
     setAcceptDrops(true);
@@ -22,8 +62,10 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWi
         if (!query.exec("CREATE TABLE users "
                   "(id INTEGER PRIMARY KEY AUTOINCREMENT, "
                   "login VARCHAR(20) UNIQUE, " // size of strings?
-                  "hash VARCHAR(30), "  // size of strings?
-                  "expiration DATE)"))
+                  "hash VARCHAR(43), "  // size of strings?
+                  "expiration DATE, "
+                   "key VARCHAR(26))"
+                        ))
             qDebug() << "ERROR: " << query.lastError().text();
         if (!query.exec("CREATE TABLE tracks "
                   "(id INTEGER PRIMARY KEY AUTOINCREMENT, "
@@ -89,10 +131,19 @@ void MainWindow::response() {
     QJsonObject recieved = recievedDocument.object();
     QJsonObject response;
     QString action = recieved["action"].toString();
+
     response["action"] = action;
     qDebug() << action << " action initiated";
     if (action == "login") {
-        response["isValid"] = signIn(recieved["login"].toString(), recieved["pass"].toString());
+        QString key = signIn(recieved["login"].toString(), recieved["pass"].toString());
+        if (key.isEmpty()) {
+            qDebug() << "3";
+            response["isValid"] = false;
+        } else {
+            qDebug() << "4";
+            response["isValid"] = true;
+            response["key"] = key;
+        }
     } else if (action == "register") {
         response["result"] = signUp(recieved["login"].toString(), recieved["pass"].toString());
     } else if (action == "getTrackList") {
@@ -106,19 +157,31 @@ void MainWindow::response() {
 //    SClients.remove(idusersocs);
 }
 
-bool MainWindow::signIn(QString login, QString hash) {
+QString MainWindow::signIn(QString login, QString hash) {
     QSqlQuery query;
-    if (!query.exec(QString("SELECT hash FROM users WHERE login='%1'").arg(login)))
+    if (!query.exec(QString("SELECT hash,key FROM users WHERE login='%1'").arg(login)))
         qDebug() << "ERROR: " << query.lastError().text();
     if (query.first() && query.value(0).toString() == hash) {
-        return true;
+        qDebug() << "1";
+        return query.value(1).toString();
     }
-    return false;
+    qDebug() << "2";
+    return QString();
 }
 
 int MainWindow::signUp(QString login, QString hash) {
     QSqlQuery query;
-    if (!query.exec(QString("INSERT INTO users (login, hash) VALUES ('%1', '%2')").arg(login, hash))) {
+    std::string keyString;
+    CryptoPP::SecByteBlock key(16);
+    CryptoPP::OS_GenerateRandomBlock(false, key, key.size());
+    std::string keyRaw = std::string(reinterpret_cast<const char*>(key.data()), key.size());
+    CryptoPP::StringSource (keyRaw, true,
+                        new CryptoPP::Base64Encoder(
+                                       new CryptoPP::StringSink(keyString)
+                                       )
+                        ); // StringSource
+
+    if (!query.exec(QString("INSERT INTO users (login, hash, key) VALUES ('%1', '%2', '%3')").arg(login, hash, QString::fromStdString(keyString)))) {
         if (query.lastError().nativeErrorCode() == "19") {
             qDebug() << "SQLite error code:" << query.lastError().nativeErrorCode();
             return 1;

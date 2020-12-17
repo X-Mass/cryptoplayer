@@ -1,10 +1,30 @@
-//#include <QtCrypto>
+#include <QtCrypto>
+#include <iostream>
+
+#include "cryptlib.h"
+#define CRYPTOPP_ENABLE_NAMESPACE_WEAK 1
+#include "sha.h"
+#include "filters.h"
+#include "base64.h"
 
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
 
 #define PORT 1337
+
+std::string SHA256HashString(std::string aString){
+    std::string digest;
+    CryptoPP::SHA256 hash;
+
+    CryptoPP::StringSource foo(aString, true,
+    new CryptoPP::HashFilter(hash,
+      new CryptoPP::Base64Encoder (
+         new CryptoPP::StringSink(digest))));
+
+    return digest;
+}
+
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWindow) {
     ui->setupUi(this);
@@ -41,10 +61,13 @@ void MainWindow::connectToServer() {
 
 void MainWindow::on_signInButton_clicked() { // Sign in
     QJsonObject message;
+    QString pass = ui->lineEdit_2->text();
+    std::string hash = SHA256HashString(pass.toStdString());
+
     message["action"] = "login";
     message["login"] = ui->lineEdit->text();
 //     QCA::Hash hash1(QStringLiteral("md5"));
-    message["pass"] = ui->lineEdit_2->text(); // must be hash here, not pure string
+    message["pass"] = QString::fromStdString(hash).left(43); // must be hash here, not pure string
     QJsonDocument document(message);
     QByteArray bytes = document.toJson();
     tcpSocket->write(bytes);
@@ -53,12 +76,22 @@ void MainWindow::on_signInButton_clicked() { // Sign in
         QJsonObject recieved = recievedDocument.object();
         if (recieved["action"].toString() == "login") {
             if (recieved["isValid"].toBool() == true) {
+                std::string key;
+                std::string encoded = recieved["key"].toString().toStdString();
+
+                CryptoPP::StringSource (encoded, true,
+                                    new CryptoPP::Base64Decoder(
+                                                   new CryptoPP::StringSink(key)
+                                                   )
+                                    );
+                CryptoPP::SecByteBlock keyBlock((const CryptoPP::byte*)key.data(), key.size());
+
                 qDebug() << "Login/Password pair is correct";
 
-                Player* player = new Player();
-                player->setParent(this);
+                Player* player = new Player(tcpSocket, keyBlock, this);
                 player->resize(320, 240);
                 player->show();
+
                 hide();
                 // TODO
             } else {
@@ -75,9 +108,12 @@ void MainWindow::on_signInButton_clicked() { // Sign in
 
 void MainWindow::on_signUpButton_clicked() { // Sign up
     QJsonObject message;
+    QString pass = ui->lineEdit_2->text();
+    std::string hash = SHA256HashString(pass.toStdString());
     message["action"] = "register";
     message["login"] = ui->lineEdit->text();
-    message["pass"] = ui->lineEdit_2->text(); // must be hash here, not pure string
+    message["pass"] = QString::fromStdString(hash).left(43);
+
     QJsonDocument document(message);
     QByteArray bytes = document.toJson();
     tcpSocket->write(bytes);
@@ -99,3 +135,7 @@ void MainWindow::on_signUpButton_clicked() { // Sign up
         qDebug() << "Server not responding";
     }
 }
+
+
+
+

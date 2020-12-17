@@ -4,16 +4,17 @@
 
 Player::Player(QWidget *parent) : QWidget(parent), ui(new Ui::Player) {
     ui->setupUi(this);
-    updateTrackList();
 }
 
 Player::~Player() {
     delete ui;
 }
 
-Player::Player(QTcpSocket *tcpSocket, QWidget *parent) : QWidget(parent), ui(new Ui::Player) {
+Player::Player(QTcpSocket *tcpSocket, CryptoPP::SecByteBlock key, QWidget *parent) : QWidget(parent), ui(new Ui::Player) {
     ui->setupUi(this);
     this->tcpSocket = tcpSocket;
+    this->key = key;
+    updateTrackList();
 }
 
 void Player::updateTrackList() {
