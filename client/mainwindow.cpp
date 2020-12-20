@@ -88,11 +88,10 @@ void MainWindow::on_signInButton_clicked() { // Sign in
 
                 qDebug() << "Login/Password pair is correct";
 
-                Player* player = new Player(tcpSocket, keyBlock, this);
+                hide();
+                Player* player = new Player(tcpSocket, keyBlock);
                 player->resize(320, 240);
                 player->show();
-
-                hide();
                 // TODO
             } else {
                 qDebug() << "Login/Password pair is incorrect";

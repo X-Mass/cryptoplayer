@@ -8,6 +8,9 @@
 #include <QtSql>
 #include <QList>
 
+#include "filters.h"
+#include "cryptlib.h"
+
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -31,11 +34,11 @@ class MainWindow : public QMainWindow {
     private:
         Ui::MainWindow *ui;
         QTcpServer *tcpServer;
-        bool serverStatus;
+        bool serverStatus = 0;
         QMap<int, QTcpSocket *> SClients;
-        QMap<int, QString> clientsKeys;
-        QMap<int, QString> clientsIV;
-        QString signIn(QString login, QString hash);
+        QMap<int, CryptoPP::SecByteBlock> clientsKeys;
+        CryptoPP::SecByteBlock iv;
+        QString signIn(QString login, QString hash, int userID);
         int signUp(QString login, QString hash); // make enum for return value. Atm 0 == success, 1 == user already in base
         QSqlDatabase sdb;
         int addFile(QString fileName);
@@ -43,5 +46,8 @@ class MainWindow : public QMainWindow {
         void updateTrackList();
         void updateTrackListView();
         void insertTrackListToJson(QJsonObject& json);
+        void sendTrack(unsigned int trackID, QTcpSocket* clientSocket);
+        void encrypt(const CryptoPP::SecByteBlock &key, const CryptoPP::SecByteBlock &iv,
+                          const std::string &filename_in, const std::string &filename_out);
 };
 #endif // MAINWINDOW_H

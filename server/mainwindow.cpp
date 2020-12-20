@@ -3,51 +3,28 @@
 
 #include <QMimeData>
 #include <QDragEnterEvent>
-#include "cryptlib.h"
 #include "osrng.h"
-#include "filters.h"
 #include "base64.h"
+#include "idea.h"
+#include "files.h"
+#include "modes.h"
+
+#include <iostream>
+#include <fstream>
 
 
 #define PORT 1337
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), ui(new Ui::MainWindow) {
-   /* std::string encoded, encoded2, encoded3;
-    CryptoPP::SecByteBlock iv(16), userAccess(16);
-    CryptoPP::OS_GenerateRandomBlock(false, iv, iv.size());
-    CryptoPP::OS_GenerateRandomBlock(false, userAccess, userAccess.size());
-    std::string ivs = std::string(reinterpret_cast<const char*>(iv.data()), iv.size());
-    CryptoPP::StringSource (ivs, true,
-                        new CryptoPP::Base64Encoder(
-                                       new CryptoPP::StringSink(encoded)
-                                       )
-                        ); // StringSource
-   //
-
-    ivs = encoded;
+    std::string encoded, encoded2, encoded3;
+    std::string ivs = "n27TDNB1syY=\n";
     CryptoPP::StringSource (ivs, true,
                         new CryptoPP::Base64Decoder(
                                        new CryptoPP::StringSink(encoded2)
                                        )
                         ); // StringSource
     CryptoPP::SecByteBlock block((const CryptoPP::byte*)encoded2.data(), encoded2.size());
-    if (block == iv) {
-        qDebug() << "LOL";
-    } else {
-        qDebug() << "Not LOL";
-    }
-
-
-    CryptoPP::StringSource (encoded2, true,
-                        new CryptoPP::Base64Encoder(
-                                       new CryptoPP::StringSink(encoded3)
-                                       )
-                        );
-
-    qDebug() << QString::fromStdString(encoded);
-    qDebug() << QString::fromStdString(encoded2);
-    qDebug() << QString::fromStdString(encoded3);*/
-
+    iv = block;
     ui->setupUi(this);
     ui->verticalLayout->setAlignment(Qt::AlignHCenter);
     setAcceptDrops(true);
@@ -126,7 +103,6 @@ void MainWindow::newUser() {
 
 void MainWindow::response() {
     QTcpSocket* clientSocket = (QTcpSocket*)sender();
-//    int idusersocs=clientSocket->socketDescriptor();
     QJsonDocument recievedDocument = QJsonDocument::fromJson(clientSocket->readAll());
     QJsonObject recieved = recievedDocument.object();
     QJsonObject response;
@@ -135,12 +111,10 @@ void MainWindow::response() {
     response["action"] = action;
     qDebug() << action << " action initiated";
     if (action == "login") {
-        QString key = signIn(recieved["login"].toString(), recieved["pass"].toString());
+        QString key = signIn(recieved["login"].toString(), recieved["pass"].toString(), clientSocket->socketDescriptor());
         if (key.isEmpty()) {
-            qDebug() << "3";
             response["isValid"] = false;
         } else {
-            qDebug() << "4";
             response["isValid"] = true;
             response["key"] = key;
         }
@@ -148,6 +122,9 @@ void MainWindow::response() {
         response["result"] = signUp(recieved["login"].toString(), recieved["pass"].toString());
     } else if (action == "getTrackList") {
         insertTrackListToJson(response);
+    } else if (action == "getTrack") {
+        sendTrack(recieved["trackID"].toInt(), clientSocket);
+        return;
     }
     QJsonDocument responseDocument(response);
     QByteArray bytes = responseDocument.toJson();
@@ -157,22 +134,30 @@ void MainWindow::response() {
 //    SClients.remove(idusersocs);
 }
 
-QString MainWindow::signIn(QString login, QString hash) {
+QString MainWindow::signIn(QString login, QString hash, int userID) {
     QSqlQuery query;
-    if (!query.exec(QString("SELECT hash,key FROM users WHERE login='%1'").arg(login)))
+    if (!query.exec(QString("SELECT hash, key FROM users WHERE login='%1'").arg(login)))
         qDebug() << "ERROR: " << query.lastError().text();
+
     if (query.first() && query.value(0).toString() == hash) {
-        qDebug() << "1";
+        std::string key = query.value(1).toString().toStdString();
+        std::string decoded;
+        CryptoPP::StringSource (key, true,
+                            new CryptoPP::Base64Decoder(
+                                           new CryptoPP::StringSink(decoded)
+                                           )
+                            ); // StringSource
+        CryptoPP::SecByteBlock block((const CryptoPP::byte*)decoded.data(), decoded.size());
+        clientsKeys[userID] = block;
         return query.value(1).toString();
     }
-    qDebug() << "2";
     return QString();
 }
 
 int MainWindow::signUp(QString login, QString hash) {
     QSqlQuery query;
     std::string keyString;
-    CryptoPP::SecByteBlock key(16);
+    CryptoPP::SecByteBlock key(CryptoPP::IDEA::DEFAULT_KEYLENGTH);
     CryptoPP::OS_GenerateRandomBlock(false, key, key.size());
     std::string keyRaw = std::string(reinterpret_cast<const char*>(key.data()), key.size());
     CryptoPP::StringSource (keyRaw, true,
@@ -181,12 +166,23 @@ int MainWindow::signUp(QString login, QString hash) {
                                        )
                         ); // StringSource
 
+
     if (!query.exec(QString("INSERT INTO users (login, hash, key) VALUES ('%1', '%2', '%3')").arg(login, hash, QString::fromStdString(keyString)))) {
         if (query.lastError().nativeErrorCode() == "19") {
             qDebug() << "SQLite error code:" << query.lastError().nativeErrorCode();
             return 1;
         }
     }
+    query.exec(QString("SELECT hash, key FROM users WHERE login='%1'").arg(login));
+    query.first();
+    std::string encoded2;
+    std::string ivs = query.value(1).toString().toStdString();
+    CryptoPP::StringSource (ivs, true,
+                        new CryptoPP::Base64Decoder(
+                                       new CryptoPP::StringSink(encoded2)
+                                       )
+                        ); // StringSource
+    CryptoPP::SecByteBlock block((const CryptoPP::byte*)encoded2.data(), encoded2.size());
     return 0;
 }
 
@@ -239,10 +235,48 @@ void MainWindow::insertTrackListToJson(QJsonObject& json) {
     QJsonArray jsonTrackList;
     while (i.hasNext()) {
         i.next();
-        QJsonArray track;
-        track.append((int)i.key());
-        track.append(i.value());
-        jsonTrackList.append (track);
+        QJsonObject track;
+        track["id"] = QJsonValue((int)i.key());
+        track["name"] = i.value();
+        jsonTrackList.append(track);
     }
     json["trackList"] = jsonTrackList;
+}
+
+void MainWindow::encrypt(const CryptoPP::SecByteBlock &key, const CryptoPP::SecByteBlock &iv,
+             const std::string &filename_in, const std::string &filename_out){
+    CryptoPP::CBC_Mode<CryptoPP::IDEA>::Encryption cipher;
+    cipher.SetKeyWithIV(key.data(), key.size(), iv.data());
+
+    std::ifstream in{filename_in, std::ios::binary};
+    std::ofstream out{filename_out, std::ios::binary};
+    std::string ivs = std::string(reinterpret_cast<const char*>(iv.data()), iv.size());
+    std::string skey = std::string(reinterpret_cast<const char*>(key.data()), key.size());
+
+    CryptoPP::FileSource{in, /*pumpAll=*/true,
+                          new CryptoPP::StreamTransformationFilter{
+                              cipher, new CryptoPP::FileSink{out}}};
+}
+
+void MainWindow::sendTrack(unsigned int trackID, QTcpSocket* clientSocket) {
+
+    qDebug() << clientsKeys[clientSocket->socketDescriptor()].size();
+    encrypt(clientsKeys[clientSocket->socketDescriptor()], iv, trackList[trackID].toStdString(), (trackList[trackID] + "_enc").toStdString());
+    QFile track(trackList[trackID] + "_enc");
+
+    track.open(QIODevice::ReadOnly);
+
+    QJsonObject response;
+    response["action"] = "getTrack";
+    response["size"] = track.size();
+    qDebug() << track.size();
+    QJsonDocument responseDocument(response);
+    QByteArray bytes = responseDocument.toJson();
+    clientSocket->write(bytes);
+    clientSocket->waitForReadyRead();
+    clientSocket->readAll();
+    qDebug() << "trying to write: " << clientSocket->write(track.readAll()) << "bytes";
+    track.remove();
+    //clientSocket->write(track.readAll());
+    //qDebug() << track.readAll().size();
 }
